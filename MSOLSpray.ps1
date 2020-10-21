@@ -87,20 +87,28 @@
   )
     
     $ErrorActionPreference= 'silentlycontinue'
-    $Usernames = Get-Content $UserList
-    $count = $Usernames.count
-    $csv = $false
-    if ($count -eq 0) {
-        $csv = $true
+    $count = 0
+    if (![string]::IsNullOrEmpty($UserList)) {
+        $Usernames = Get-Content $UserList
+        $count = $Usernames.count
+        $csv = $false
+    } elseif (![string]::IsNullOrEmpty($UserPassCSV)) {
         $credsCSV = Import-Csv -Path $UserPassCSV
-        $count = $credsCSV.count
+        # For whatever reason, Import-CSV decides to return an entirely different object if the csv file has 1 entry...
+        # This is a great example on how to create obscure errors for absolutely no reason. Thanks Import-CSV. :|
+        if ($credsCSV.GetType().Name -eq "PSCustomObject") {
+            $count = 1
+        } else {
+            $count = $credsCSV.count
+        }
+        $csv = $true
     }
     $curr_user = 0
     $lockout_count = 0
     $lockoutquestion = 0
     $fullresults = @()
 
-    Write-Host -ForegroundColor "yellow" ("[*] There are " + $count + " total users to spray.")
+    Write-Host -ForegroundColor "yellow" ("[*] There are $count total users to spray.")
     Write-Host -ForegroundColor "yellow" "[*] Now spraying Microsoft Online."
     $currenttime = Get-Date
     Write-Host -ForegroundColor "yellow" "[*] Current date and time: $currenttime"
