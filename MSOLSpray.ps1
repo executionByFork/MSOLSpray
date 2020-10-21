@@ -16,6 +16,10 @@
     .PARAMETER UserList
         
         UserList file filled with usernames one-per-line in the format "user@domain.com"
+
+    .PARAMETER UserPassCSV
+        
+        A CSV file with the first row set to "EMAIL","PASSWORD" which contains a list of username and password combinations to test
     
     .PARAMETER Password
         
@@ -60,6 +64,10 @@
     [string]
     $UserList = "",
 
+    [Parameter(Mandatory = $False)]
+    [string]
+    $UserPassCSV = "",
+
     [Parameter(Position = 2, Mandatory = $False)]
     [string]
     $Password = "",
@@ -81,6 +89,12 @@
     $ErrorActionPreference= 'silentlycontinue'
     $Usernames = Get-Content $UserList
     $count = $Usernames.count
+    $csv = $false
+    if ($count -eq 0) {
+        $csv = $true
+        $credsCSV = Import-Csv -Path $UserPassCSV
+        $count = $credsCSV.count
+    }
     $curr_user = 0
     $lockout_count = 0
     $lockoutquestion = 0
@@ -91,7 +105,13 @@
     $currenttime = Get-Date
     Write-Host -ForegroundColor "yellow" "[*] Current date and time: $currenttime"
 
-    ForEach ($username in $usernames){
+    for ($i = 0; $i -lt $count; $i++) {
+        if ($csv -eq $true) {
+            $username = $credsCSV[$i].EMAIL
+            $password = $credsCSV[$i].PASSWORD
+        } else {
+            $username = $Usernames[$i]
+        }
         
         # User counter
         $curr_user += 1
